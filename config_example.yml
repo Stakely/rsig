@@ -1,2 +1,4 @@
 http:
   port: 9090
+database:
+  dsn: 'postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable'

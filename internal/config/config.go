@@ -13,14 +13,18 @@ type HTTP struct {
 	Port int `mapstructure:"port"`
 }
 
+type DATABASE struct {
+	DbDsn string `mapstructure:"dsn"`
+}
 type Config struct {
-	HTTP HTTP `mapstructure:"http"`
+	HTTP     HTTP     `mapstructure:"http"`
+	DATABASE DATABASE `mapstructure:"database"`
 }
 
 var (
 	once   sync.Once
 	mu     sync.RWMutex
-	c      = Config{HTTP: HTTP{Port: 8080}}
+	c      = Config{HTTP: HTTP{Port: 8080}, DATABASE: DATABASE{DbDsn: ""}}
 	inited bool
 )
 
@@ -28,6 +32,7 @@ func Init(cfgFile string) (err error) {
 	once.Do(func() {
 		// Defaults
 		viper.SetDefault("http.port", 8080)
+		viper.SetDefault("database.dsn", "")
 
 		// Config file
 		if cfgFile != "" {
@@ -40,6 +45,7 @@ func Init(cfgFile string) (err error) {
 		}
 
 		_ = viper.BindEnv("http.port", "HTTP_PORT")
+		_ = viper.BindEnv("database.dsn", "DATABASE_DSN")
 		viper.AutomaticEnv()
 
 		if e := viper.ReadInConfig(); e != nil {
