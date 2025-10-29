@@ -1,3 +1,6 @@
+validators:
+  keystore_path:
+  keystore_password_path:
 http:
   port: 9090
 database:
