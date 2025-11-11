@@ -8,36 +8,52 @@ import (
 	"net/http"
 	"rsig/internal/config"
 	"rsig/internal/validator"
+	"rsig/server/controllers"
 	"time"
 
 	_ "github.com/lib/pq"
 )
 
-func InitServer(cfg config.Config) error {
+type HttpApi struct {
+	DB      *sql.DB
+	Keys    map[string]*validator.ValidatorKey
+	Handler http.Handler
+}
+
+func BuildHttpApi(ctx context.Context, cfg config.Config) (*HttpApi, func(context.Context) error, error) {
+	// 1. Connect to the database
 	db, err := sql.Open("postgres", cfg.DATABASE.DbDsn)
 	if err != nil {
-		return fmt.Errorf("sql.Open failed: %w", err)
+		return nil, nil, fmt.Errorf("sql.Open failed: %w", err)
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	pingCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-
-	if err := db.PingContext(ctx); err != nil {
-		return fmt.Errorf("database not reachable: %w", err)
+	if err := db.PingContext(pingCtx); err != nil {
+		_ = db.Close()
+		return nil, nil, fmt.Errorf("database not reachable: %w", err)
 	}
 
-	log.Println("✅  Database connection established successfully")
+	log.Println("🛢️  Database reached out")
 
+	// 2. Load keys
 	keys, err := validator.LoadValidatorKeys(cfg.VALIDATORS.KeystorePath, cfg.VALIDATORS.KeyStorePasswordPath)
 	if err != nil {
-		log.Fatalf("error loading keys: %v", err)
+		_ = db.Close()
+		return nil, nil, fmt.Errorf("load keys: %w", err)
 	}
 
-	log.Printf("✅  Loaded %d validator keys into memory", len(keys))
-
-	addr := fmt.Sprintf(":%d", cfg.HTTP.Port)
+	log.Printf("🔐  Keys loaded from keystore: %d\n", len(keys))
+	// 3. Build mux server
 	mux := http.NewServeMux()
-	registerRoutes(mux)
-	log.Println("✅  Rsig listening on", addr)
-	return http.ListenAndServe(addr, mux)
+	controllers.RegisterControllers(mux, keys)
+
+	app := &HttpApi{
+		DB:      db,
+		Keys:    keys,
+		Handler: mux,
+	}
+	cleanup := func(ctx context.Context) error {
+		return db.Close()
+	}
+	return app, cleanup, nil
 }

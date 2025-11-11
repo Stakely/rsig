@@ -209,3 +209,14 @@ func bytesEqual(a, b []byte) bool {
 	}
 	return true
 }
+
+func beToLE32(in []byte) ([]byte, error) {
+	if len(in) != 32 {
+		return nil, fmt.Errorf("private key must be 32 bytes, got %d", len(in))
+	}
+	out := make([]byte, 32)
+	for i := 0; i < 32; i++ {
+		out[i] = in[31-i]
+	}
+	return out, nil
+}
