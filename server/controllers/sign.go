@@ -57,14 +57,23 @@ func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey)
 			return
 		}
 
-		sigHex, err := signer.SignAttestation(req, *vKey)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("error: %v", err), http.StatusBadRequest)
+		var sigHex string
+		switch req.Type {
+		case signer.ArtifactAttestation:
+			sigHex, err = signer.SignAttestation(req, *vKey)
+		case signer.ArtifactBlockV2:
+			sigHex, err = signer.SignBlock(req, *vKey)
+		default:
+			http.Error(w, fmt.Sprintf("unsupported artifact type: %s", req.Type), http.StatusBadRequest)
+			return
 		}
 
-		resp := map[string]string{
-			"signature": sigHex,
+		if err != nil {
+			http.Error(w, fmt.Sprintf("error: %v", err), http.StatusBadRequest)
+			return
 		}
+
+		resp := map[string]string{"signature": sigHex}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(resp)
 	})

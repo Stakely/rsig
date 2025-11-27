@@ -84,6 +84,7 @@ type ArtifactType string
 
 const (
 	ArtifactAttestation ArtifactType = "ATTESTATION"
+	ArtifactBlockV2     ArtifactType = "BLOCK_V2"
 )
 
 type Fork struct {
@@ -106,11 +107,35 @@ type AttestationData struct {
 	Source          Checkpoint `json:"source"`
 	Target          Checkpoint `json:"target"`
 }
+
+type BeaconBlockHeader struct {
+	Slot          Uint64  `json:"slot"`
+	ProposerIndex Uint64  `json:"proposer_index"`
+	ParentRoot    Bytes32 `json:"parent_root"`
+	StateRoot     Bytes32 `json:"state_root"`
+	BodyRoot      Bytes32 `json:"body_root"`
+}
+
+type BeaconBlock struct {
+	Slot          Uint64  `json:"slot"`
+	ProposerIndex Uint64  `json:"proposer_index"`
+	ParentRoot    Bytes32 `json:"parent_root"`
+	StateRoot     Bytes32 `json:"state_root"`
+	BodyRoot      Bytes32 `json:"body_root"`
+}
+
+type BlockRequest struct {
+	Version     string             `json:"version"`
+	Block       *BeaconBlock       `json:"block,omitempty"`
+	BlockHeader *BeaconBlockHeader `json:"block_header,omitempty"`
+}
+
 type Eth2SigningRequestBody struct {
-	Type        ArtifactType     `json:"type"`
-	SigningRoot *Bytes32         `json:"signingRoot,omitempty"`
-	ForkInfo    *ForkInfo        `json:"fork_info"`
-	Attestation *AttestationData `json:"attestation,omitempty"`
+	Type         ArtifactType     `json:"type"`
+	SigningRoot  *Bytes32         `json:"signingRoot,omitempty"`
+	ForkInfo     *ForkInfo        `json:"fork_info"`
+	Attestation  *AttestationData `json:"attestation,omitempty"`
+	BlockRequest *BlockRequest    `json:"beacon_block,omitempty"`
 }
 
 type SigningData struct {
@@ -119,3 +144,6 @@ type SigningData struct {
 }
 
 var domainBeaconAttester = [4]byte{0x01, 0x00, 0x00, 0x00}
+var domainBeaconProposer = [4]byte{0x00, 0x00, 0x00, 0x00}
+
+const slotsPerEpoch = 32
