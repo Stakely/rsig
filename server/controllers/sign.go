@@ -43,12 +43,8 @@ func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey)
 			return
 		}
 
-		if req.Type != signer.ArtifactAttestation {
+		if req.Type != signer.ArtifactAttestation && req.Type != signer.ArtifactBlockV2 {
 			http.Error(w, "only ATTESTATION supported", http.StatusBadRequest)
-			return
-		}
-		if req.Attestation == nil {
-			http.Error(w, "attestation must be specified", http.StatusBadRequest)
 			return
 		}
 
