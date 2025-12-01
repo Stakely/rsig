@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"rsig/internal/config"
+	"rsig/internal/slashing"
 	"rsig/internal/validator"
 	"rsig/server/controllers"
 	"time"
@@ -43,9 +44,13 @@ func BuildHttpApi(ctx context.Context, cfg config.Config) (*HttpApi, func(contex
 	}
 
 	log.Printf("🔐  Keys loaded from keystore: %d\n", len(keys))
-	// 3. Build mux server
+
+	// 3. Slashing protection
+	sp := slashing.NewSlashingProtection(db)
+
+	// 4. Build mux server
 	mux := http.NewServeMux()
-	controllers.RegisterControllers(mux, keys)
+	controllers.RegisterControllers(mux, keys, sp)
 
 	app := &HttpApi{
 		DB:      db,

@@ -2,6 +2,7 @@ package controllers_test
 
 import (
 	"context"
+	"database/sql"
 	"net/http/httptest"
 	"testing"
 
@@ -32,4 +33,16 @@ func buildTestApi(t *testing.T) *httptest.Server {
 
 	ts := httptest.NewServer(app.Handler)
 	return ts
+}
+
+func truncateTable(ctx context.Context, table string) error {
+	db, err := sql.Open("postgres", "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable")
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	query := "TRUNCATE TABLE " + table + " RESTART IDENTITY CASCADE;"
+	_, err = db.ExecContext(ctx, query)
+	return err
 }

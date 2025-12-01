@@ -5,10 +5,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"rsig/internal/slashing"
 	"rsig/internal/validator"
 )
 
-func SignAttestation(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {
+func SignAttestation(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashing.SlashingProtection) (string, error) {
 	if req.Attestation == nil {
 		return "", errors.New("attestation must be specified")
 	}
@@ -42,15 +43,36 @@ func SignAttestation(req Eth2SigningRequestBody, v validator.ValidatorKey) (stri
 		}
 	}
 
+	pubKey, err := v.PubkeyBytes()
+	if err != nil {
+		return "", fmt.Errorf("invalid validator pub key: %w", err)
+	}
+
+	canSign, err := sp.CanSignAttestation(pubKey, signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("slashing protection attestation: %w", err)
+	}
+	if !canSign {
+		return "", fmt.Errorf("slashing protection: attestation already signed for this (validator_pubkey, signing_root)")
+	}
+
 	sigHex, err := v.Sign(signingRoot[:])
 	if err != nil {
 		return "", fmt.Errorf("bls sign: %w", err)
 	}
 
+	inserted, err := sp.InsertAttestationSignature(pubKey, signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("slashing protection insert attestation: %w", err)
+	}
+	if !inserted {
+		return "", fmt.Errorf("slashing protection: attestation already signed for this (validator_pubkey, signing_root)")
+	}
+
 	return sigHex, nil
 }
 
-func SignBlock(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {
+func SignBlock(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashing.SlashingProtection) (string, error) {
 	if req.ForkInfo == nil {
 		return "", errors.New("fork_info must be specified")
 	}
@@ -86,9 +108,30 @@ func SignBlock(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, er
 		}
 	}
 
+	pubKey, err := v.PubkeyBytes()
+	if err != nil {
+		return "", fmt.Errorf("invalid validator pub key: %w", err)
+	}
+
+	canSign, err := sp.CanSignBlock(pubKey, signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("slashing protection block: %w", err)
+	}
+	if !canSign {
+		return "", fmt.Errorf("slashing protection: block already signed for this (validator_pubkey, signing_root)")
+	}
+
 	sigHex, err := v.Sign(signingRoot[:])
 	if err != nil {
 		return "", fmt.Errorf("bls sign: %w", err)
+	}
+
+	inserted, err := sp.InsertBlockSignature(pubKey, signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("slashing protection insert block: %w", err)
+	}
+	if !inserted {
+		return "", fmt.Errorf("slashing protection: block already signed for this (validator_pubkey, signing_root)")
 	}
 
 	return sigHex, nil

@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/http"
 	"rsig/internal/signer"
+	"rsig/internal/slashing"
 	"rsig/internal/validator"
 	"strings"
 )
 
-func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey) {
+func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey, sp *slashing.SlashingProtection) {
 	mux.HandleFunc("/sign/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -56,9 +57,9 @@ func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey)
 		var sigHex string
 		switch req.Type {
 		case signer.ArtifactAttestation:
-			sigHex, err = signer.SignAttestation(req, *vKey)
+			sigHex, err = signer.SignAttestation(req, *vKey, sp)
 		case signer.ArtifactBlockV2:
-			sigHex, err = signer.SignBlock(req, *vKey)
+			sigHex, err = signer.SignBlock(req, *vKey, sp)
 		default:
 			http.Error(w, fmt.Sprintf("unsupported artifact type: %s", req.Type), http.StatusBadRequest)
 			return
