@@ -134,6 +134,7 @@ const (
 	AggregationSlot     ArtifactType = "AGGREGATION_SLOT"
 	AggregateAndProof   ArtifactType = "AGGREGATE_AND_PROOF"
 	VoluntaryExit       ArtifactType = "VOLUNTARY_EXIT"
+	RandaoReveal        ArtifactType = "RANDAO_REVEAL"
 )
 
 type Fork struct {
@@ -199,6 +200,10 @@ type VoluntaryExitData struct {
 	ValidatorIndex Uint64 `json:"validator_index"`
 }
 
+type RandaoRevealData struct {
+	Epoch Uint64 `json:"epoch"`
+}
+
 type Eth2SigningRequestBody struct {
 	Type              ArtifactType           `json:"type"`
 	SigningRoot       *Bytes32               `json:"signingRoot,omitempty"`
@@ -208,6 +213,7 @@ type Eth2SigningRequestBody struct {
 	AggregationSlot   *AggregationSlotData   `json:"aggregation_slot,omitempty"`
 	AggregateAndProof *AggregateAndProofData `json:"aggregate_and_proof,omitempty"`
 	VoluntaryExit     *VoluntaryExitData     `json:"voluntary_exit,omitempty"`
+	RandaoReveal      *RandaoRevealData      `json:"randao_reveal,omitempty"`
 }
 
 func (r *Eth2SigningRequestBody) UnmarshalJSON(data []byte) error {
@@ -244,5 +250,6 @@ var domainBeaconProposer = [4]byte{0x00, 0x00, 0x00, 0x00}
 var domainSelectionProof = [4]byte{0x05, 0x00, 0x00, 0x00}
 var domainAggregateAndProof = [4]byte{0x06, 0x00, 0x00, 0x00}
 var domainVoluntaryExit = [4]byte{0x04, 0x00, 0x00, 0x00}
+var domainRandao = [4]byte{0x02, 0x00, 0x00, 0x00}
 
 const slotsPerEpoch = 32

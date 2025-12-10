@@ -264,3 +264,42 @@ func SignVoluntaryExit(req Eth2SigningRequestBody, v validator.ValidatorKey) (st
 
 	return sigHex, nil
 }
+
+func SignRandaoReveal(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {
+	if req.ForkInfo == nil {
+		return "", errors.New("fork_info must be specified")
+	}
+	if req.RandaoReveal == nil {
+		return "", errors.New("randao_reveal must be specified")
+	}
+
+	epoch := uint64(req.RandaoReveal.Epoch)
+	objectRoot := hashTreeRootUint64(epoch)
+
+	domain, err := computeDomainRandao(*req.ForkInfo, epoch)
+	if err != nil {
+		return "", fmt.Errorf("compute randao domain: %w", err)
+	}
+
+	signingRoot, err := computeSigningRoot(objectRoot, domain)
+	if err != nil {
+		return "", fmt.Errorf("compute signing root: %w", err)
+	}
+
+	if req.SigningRoot != nil {
+		if !bytes.Equal(req.SigningRoot[:], signingRoot[:]) {
+			return "", fmt.Errorf(
+				"provided signing_root != computed signing_root (provided=%s computed=%s)",
+				"0x"+hex.EncodeToString(req.SigningRoot[:]),
+				"0x"+hex.EncodeToString(signingRoot[:]),
+			)
+		}
+	}
+
+	sigHex, err := v.Sign(signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("bls sign: %w", err)
+	}
+
+	return sigHex, nil
+}

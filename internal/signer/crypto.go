@@ -162,6 +162,10 @@ func computeDomainVoluntaryExit(fi ForkInfo, epoch uint64) (phase0.Domain, error
 	return computeDomain(domainVoluntaryExit, fi, epoch)
 }
 
+func computeDomainRandao(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+	return computeDomain(domainRandao, fi, epoch)
+}
+
 func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain, error) {
 	var forkVersion Bytes4
 	if epoch < uint64(fi.Fork.Epoch) {
