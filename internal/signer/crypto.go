@@ -1,11 +1,18 @@
 package signer
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 )
+
+func hashTreeRootUint64(u uint64) Bytes32 {
+	var out Bytes32
+	binary.LittleEndian.PutUint64(out[0:8], u)
+	return out
+}
 
 func hashTreeRootAttestation(a *AttestationData) (Bytes32, error) {
 	if a == nil {
@@ -49,6 +56,10 @@ func computeDomainAttester(fi ForkInfo, targetEpoch uint64) (phase0.Domain, erro
 
 func computeDomainProposer(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainBeaconProposer, fi, epoch)
+}
+
+func computeDomainAggregationSlot(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+	return computeDomain(domainSelectionProof, fi, epoch)
 }
 
 func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain, error) {

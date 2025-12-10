@@ -85,6 +85,7 @@ type ArtifactType string
 const (
 	ArtifactAttestation ArtifactType = "ATTESTATION"
 	ArtifactBlockV2     ArtifactType = "BLOCK_V2"
+	AggregationSlot     ArtifactType = "AGGREGATION_SLOT"
 )
 
 type Fork struct {
@@ -130,12 +131,41 @@ type BlockRequest struct {
 	BlockHeader *BeaconBlockHeader `json:"block_header,omitempty"`
 }
 
+type AggregationSlotData struct {
+	Slot Uint64 `json:"slot"`
+}
+
 type Eth2SigningRequestBody struct {
-	Type         ArtifactType     `json:"type"`
-	SigningRoot  *Bytes32         `json:"signingRoot,omitempty"`
-	ForkInfo     *ForkInfo        `json:"fork_info"`
-	Attestation  *AttestationData `json:"attestation,omitempty"`
-	BlockRequest *BlockRequest    `json:"beacon_block,omitempty"`
+	Type            ArtifactType         `json:"type"`
+	SigningRoot     *Bytes32             `json:"signingRoot,omitempty"`
+	ForkInfo        *ForkInfo            `json:"fork_info"`
+	Attestation     *AttestationData     `json:"attestation,omitempty"`
+	BlockRequest    *BlockRequest        `json:"beacon_block,omitempty"`
+	AggregationSlot *AggregationSlotData `json:"aggregation_slot,omitempty"`
+}
+
+func (r *Eth2SigningRequestBody) UnmarshalJSON(data []byte) error {
+	type Alias Eth2SigningRequestBody
+
+	aux := &struct {
+		ForkInfoSnake *ForkInfo `json:"fork_info"`
+		ForkInfoCamel *ForkInfo `json:"forkInfo"`
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if aux.ForkInfoSnake != nil {
+		r.ForkInfo = aux.ForkInfoSnake
+	} else if aux.ForkInfoCamel != nil {
+		r.ForkInfo = aux.ForkInfoCamel
+	}
+
+	return nil
 }
 
 type SigningData struct {
@@ -145,5 +175,6 @@ type SigningData struct {
 
 var domainBeaconAttester = [4]byte{0x01, 0x00, 0x00, 0x00}
 var domainBeaconProposer = [4]byte{0x00, 0x00, 0x00, 0x00}
+var domainSelectionProof = [4]byte{0x05, 0x00, 0x00, 0x00}
 
 const slotsPerEpoch = 32

@@ -136,3 +136,44 @@ func SignBlock(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashin
 
 	return sigHex, nil
 }
+
+func SignAggregationSlot(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {
+	if req.ForkInfo == nil {
+		return "", errors.New("fork_info must be specified")
+	}
+	if req.AggregationSlot == nil {
+		return "", errors.New("aggregation_slot must be specified")
+	}
+
+	slot := uint64(req.AggregationSlot.Slot)
+	epoch := slot / slotsPerEpoch
+
+	objectRoot := hashTreeRootUint64(slot)
+
+	domain, err := computeDomainAggregationSlot(*req.ForkInfo, epoch)
+	if err != nil {
+		return "", fmt.Errorf("compute aggregation slot domain: %w", err)
+	}
+
+	signingRoot, err := computeSigningRoot(objectRoot, domain)
+	if err != nil {
+		return "", fmt.Errorf("compute signing root: %w", err)
+	}
+
+	if req.SigningRoot != nil {
+		if !bytes.Equal(req.SigningRoot[:], signingRoot[:]) {
+			return "", fmt.Errorf(
+				"provided signing_root != computed signing_root (provided=%s computed=%s)",
+				"0x"+hex.EncodeToString(req.SigningRoot[:]),
+				"0x"+hex.EncodeToString(signingRoot[:]),
+			)
+		}
+	}
+
+	sigHex, err := v.Sign(signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("bls sign: %w", err)
+	}
+
+	return sigHex, nil
+}

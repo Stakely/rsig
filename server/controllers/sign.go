@@ -44,8 +44,8 @@ func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey,
 			return
 		}
 
-		if req.Type != signer.ArtifactAttestation && req.Type != signer.ArtifactBlockV2 {
-			http.Error(w, "only ATTESTATION supported", http.StatusBadRequest)
+		if req.Type != signer.ArtifactAttestation && req.Type != signer.ArtifactBlockV2 && req.Type != signer.AggregationSlot {
+			http.Error(w, "type not supported", http.StatusBadRequest)
 			return
 		}
 
@@ -60,6 +60,8 @@ func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey,
 			sigHex, err = signer.SignAttestation(req, *vKey, sp)
 		case signer.ArtifactBlockV2:
 			sigHex, err = signer.SignBlock(req, *vKey, sp)
+		case signer.AggregationSlot:
+			sigHex, err = signer.SignAggregationSlot(req, *vKey)
 		default:
 			http.Error(w, fmt.Sprintf("unsupported artifact type: %s", req.Type), http.StatusBadRequest)
 			return
