@@ -123,6 +123,26 @@ func hashTreeRootAggregateAndProof(ap *AggregateAndProofData) (Bytes32, error) {
 	return out, nil
 }
 
+func hashTreeRootVoluntaryExit(ve *VoluntaryExitData) (Bytes32, error) {
+	if ve == nil {
+		return Bytes32{}, errors.New("nil voluntary_exit")
+	}
+
+	pve := phase0.VoluntaryExit{
+		Epoch:          phase0.Epoch(uint64(ve.Epoch)),
+		ValidatorIndex: phase0.ValidatorIndex(uint64(ve.ValidatorIndex)),
+	}
+
+	root, err := pve.HashTreeRoot()
+	if err != nil {
+		return Bytes32{}, fmt.Errorf("hash_tree_root(VoluntaryExit): %w", err)
+	}
+
+	var out Bytes32
+	copy(out[:], root[:])
+	return out, nil
+}
+
 func computeDomainAttester(fi ForkInfo, targetEpoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainBeaconAttester, fi, targetEpoch)
 }
@@ -137,6 +157,9 @@ func computeDomainAggregationSlot(fi ForkInfo, epoch uint64) (phase0.Domain, err
 
 func computeDomainAggregateAndProof(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainAggregateAndProof, fi, epoch)
+}
+func computeDomainVoluntaryExit(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+	return computeDomain(domainVoluntaryExit, fi, epoch)
 }
 
 func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain, error) {

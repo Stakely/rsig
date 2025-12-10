@@ -133,6 +133,7 @@ const (
 	ArtifactBlockV2     ArtifactType = "BLOCK_V2"
 	AggregationSlot     ArtifactType = "AGGREGATION_SLOT"
 	AggregateAndProof   ArtifactType = "AGGREGATE_AND_PROOF"
+	VoluntaryExit       ArtifactType = "VOLUNTARY_EXIT"
 )
 
 type Fork struct {
@@ -193,6 +194,11 @@ type AggregationSlotData struct {
 	Slot Uint64 `json:"slot"`
 }
 
+type VoluntaryExitData struct {
+	Epoch          Uint64 `json:"epoch"`
+	ValidatorIndex Uint64 `json:"validator_index"`
+}
+
 type Eth2SigningRequestBody struct {
 	Type              ArtifactType           `json:"type"`
 	SigningRoot       *Bytes32               `json:"signingRoot,omitempty"`
@@ -201,6 +207,7 @@ type Eth2SigningRequestBody struct {
 	BlockRequest      *BlockRequest          `json:"beacon_block,omitempty"`
 	AggregationSlot   *AggregationSlotData   `json:"aggregation_slot,omitempty"`
 	AggregateAndProof *AggregateAndProofData `json:"aggregate_and_proof,omitempty"`
+	VoluntaryExit     *VoluntaryExitData     `json:"voluntary_exit,omitempty"`
 }
 
 func (r *Eth2SigningRequestBody) UnmarshalJSON(data []byte) error {
@@ -236,5 +243,6 @@ var domainBeaconAttester = [4]byte{0x01, 0x00, 0x00, 0x00}
 var domainBeaconProposer = [4]byte{0x00, 0x00, 0x00, 0x00}
 var domainSelectionProof = [4]byte{0x05, 0x00, 0x00, 0x00}
 var domainAggregateAndProof = [4]byte{0x06, 0x00, 0x00, 0x00}
+var domainVoluntaryExit = [4]byte{0x04, 0x00, 0x00, 0x00}
 
 const slotsPerEpoch = 32
