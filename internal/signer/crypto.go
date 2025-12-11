@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"crypto/sha256"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -80,6 +81,21 @@ func hashTreeRootFullAttestation(a *Attestation) (Bytes32, error) {
 	}
 	var out Bytes32
 	copy(out[:], root[:])
+	return out, nil
+}
+
+func hashTreeRootSyncCommitteeMessage(m *SyncCommitteeMessageData) (Bytes32, error) {
+	if m == nil {
+		return Bytes32{}, errors.New("nil sync_committee_message")
+	}
+
+	slotChunk := hashTreeRootUint64(uint64(m.Slot))
+	blockChunk := m.BeaconBlockRoot
+
+	sum := sha256.Sum256(append(slotChunk[:], blockChunk[:]...))
+
+	var out Bytes32
+	copy(out[:], sum[:])
 	return out, nil
 }
 
@@ -164,6 +180,10 @@ func computeDomainVoluntaryExit(fi ForkInfo, epoch uint64) (phase0.Domain, error
 
 func computeDomainRandao(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainRandao, fi, epoch)
+}
+
+func computeDomainSyncCommittee(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+	return computeDomain(domainSyncCommittee, fi, epoch)
 }
 
 func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain, error) {
