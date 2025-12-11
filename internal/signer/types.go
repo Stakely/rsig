@@ -129,14 +129,15 @@ func (u *Uint64) UnmarshalJSON(data []byte) error {
 type ArtifactType string
 
 const (
-	ArtifactAttestation         ArtifactType = "ATTESTATION"
-	ArtifactBlockV2             ArtifactType = "BLOCK_V2"
-	AggregationSlot             ArtifactType = "AGGREGATION_SLOT"
-	AggregateAndProof           ArtifactType = "AGGREGATE_AND_PROOF"
-	VoluntaryExit               ArtifactType = "VOLUNTARY_EXIT"
-	RandaoReveal                ArtifactType = "RANDAO_REVEAL"
-	SyncCommitteeMessage        ArtifactType = "SYNC_COMMITTEE_MESSAGE"
-	SyncCommitteeSelectionProof ArtifactType = "SYNC_COMMITTEE_SELECTION_PROOF"
+	ArtifactAttestation                   ArtifactType = "ATTESTATION"
+	ArtifactBlockV2                       ArtifactType = "BLOCK_V2"
+	AggregationSlot                       ArtifactType = "AGGREGATION_SLOT"
+	AggregateAndProof                     ArtifactType = "AGGREGATE_AND_PROOF"
+	VoluntaryExit                         ArtifactType = "VOLUNTARY_EXIT"
+	RandaoReveal                          ArtifactType = "RANDAO_REVEAL"
+	SyncCommitteeMessage                  ArtifactType = "SYNC_COMMITTEE_MESSAGE"
+	SyncCommitteeSelectionProof           ArtifactType = "SYNC_COMMITTEE_SELECTION_PROOF"
+	SyncCommitteeContributionAndProofType ArtifactType = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"
 )
 
 type Fork struct {
@@ -216,6 +217,20 @@ type SyncAggregatorSelectionData struct {
 	SubcommitteeIndex string `json:"subcommittee_index"` // uint64 en decimal
 }
 
+type SyncCommitteeContributionData struct {
+	Slot              Uint64   `json:"slot"`
+	BeaconBlockRoot   Bytes32  `json:"beacon_block_root"`
+	SubcommitteeIndex Uint64   `json:"subcommittee_index"`
+	AggregationBits   HexBytes `json:"aggregation_bits"`
+	Signature         Bytes96  `json:"signature"`
+}
+
+type ContributionAndProofData struct {
+	AggregatorIndex Uint64                         `json:"aggregator_index"`
+	SelectionProof  Bytes96                        `json:"selection_proof"`
+	Contribution    *SyncCommitteeContributionData `json:"contribution"`
+}
+
 type Eth2SigningRequestBody struct {
 	Type                        ArtifactType                 `json:"type"`
 	SigningRoot                 *Bytes32                     `json:"signingRoot,omitempty"`
@@ -228,6 +243,7 @@ type Eth2SigningRequestBody struct {
 	RandaoReveal                *RandaoRevealData            `json:"randao_reveal,omitempty"`
 	SyncCommitteeMessage        *SyncCommitteeMessageData    `json:"sync_committee_message,omitempty"`
 	SyncAggregatorSelectionData *SyncAggregatorSelectionData `json:"sync_aggregator_selection_data"`
+	ContributionAndProof        *ContributionAndProofData    `json:"contribution_and_proof,omitempty"`
 }
 
 func (r *Eth2SigningRequestBody) UnmarshalJSON(data []byte) error {
@@ -267,5 +283,6 @@ var domainVoluntaryExit = [4]byte{0x04, 0x00, 0x00, 0x00}
 var domainRandao = [4]byte{0x02, 0x00, 0x00, 0x00}
 var domainSyncCommittee = [4]byte{0x07, 0x00, 0x00, 0x00}
 var domainSyncCommitteeSelectionProof = [4]byte{0x08, 0x00, 0x00, 0x00}
+var domainContributionAndProof = [4]byte{0x09, 0x00, 0x00, 0x00} // DOMAIN_CONTRIBUTION_AND_PROOF
 
 const slotsPerEpoch = 32

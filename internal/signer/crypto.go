@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/attestantio/go-eth2-client/spec/altair"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/prysmaticlabs/go-bitfield"
 )
@@ -170,6 +171,40 @@ func hashTreeRootSyncAggregatorSelectionData(slot, subcommitteeIndex uint64) (By
 	return out, nil
 }
 
+func hashTreeRootContributionAndProof(cp *ContributionAndProofData) (Bytes32, error) {
+	if cp == nil {
+		return Bytes32{}, errors.New("nil contribution_and_proof")
+	}
+	if cp.Contribution == nil {
+		return Bytes32{}, errors.New("nil contribution in contribution_and_proof")
+	}
+
+	contrib := cp.Contribution
+
+	var pContrib altair.SyncCommitteeContribution
+	pContrib.Slot = phase0.Slot(uint64(contrib.Slot))
+
+	copy(pContrib.BeaconBlockRoot[:], contrib.BeaconBlockRoot[:])
+
+	pContrib.SubcommitteeIndex = uint64(contrib.SubcommitteeIndex)
+	pContrib.AggregationBits = bitfield.Bitvector128([]byte(contrib.AggregationBits))
+	copy(pContrib.Signature[:], contrib.Signature[:])
+
+	var pCP altair.ContributionAndProof
+	pCP.AggregatorIndex = phase0.ValidatorIndex(uint64(cp.AggregatorIndex))
+	pCP.Contribution = &pContrib
+	copy(pCP.SelectionProof[:], cp.SelectionProof[:])
+
+	root, err := pCP.HashTreeRoot()
+	if err != nil {
+		return Bytes32{}, fmt.Errorf("hash_tree_root(ContributionAndProof): %w", err)
+	}
+
+	var out Bytes32
+	copy(out[:], root[:])
+	return out, nil
+}
+
 func computeDomainAttester(fi ForkInfo, targetEpoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainBeaconAttester, fi, targetEpoch)
 }
@@ -199,6 +234,10 @@ func computeDomainSyncCommittee(fi ForkInfo, epoch uint64) (phase0.Domain, error
 
 func computeDomainSyncCommitteeSelectionProof(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainSyncCommitteeSelectionProof, fi, epoch)
+}
+
+func computeDomainContributionAndProof(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+	return computeDomain(domainContributionAndProof, fi, epoch)
 }
 
 func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain, error) {

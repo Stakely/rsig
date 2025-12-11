@@ -412,3 +412,56 @@ func SignSyncCommitteeSelectionProof(
 
 	return sigHex, nil
 }
+
+func SignSyncCommitteeContributionAndProof(
+	req Eth2SigningRequestBody,
+	v validator.ValidatorKey,
+) (string, error) {
+	if req.ForkInfo == nil {
+		return "", errors.New("fork_info must be specified")
+	}
+	if req.ContributionAndProof == nil {
+		return "", errors.New("contribution_and_proof must be specified")
+	}
+	if req.ContributionAndProof.Contribution == nil {
+		return "", errors.New("contribution_and_proof.contribution must be specified")
+	}
+
+	cp := req.ContributionAndProof
+	contrib := cp.Contribution
+
+	slot := uint64(contrib.Slot)
+	epoch := slot / slotsPerEpoch
+
+	objRoot, err := hashTreeRootContributionAndProof(cp)
+	if err != nil {
+		return "", fmt.Errorf("hash contribution_and_proof SSZ: %w", err)
+	}
+
+	domain, err := computeDomainContributionAndProof(*req.ForkInfo, epoch)
+	if err != nil {
+		return "", fmt.Errorf("compute contribution_and_proof domain: %w", err)
+	}
+
+	signingRoot, err := computeSigningRoot(objRoot, domain)
+	if err != nil {
+		return "", fmt.Errorf("compute signing root: %w", err)
+	}
+
+	if req.SigningRoot != nil {
+		if !bytes.Equal(req.SigningRoot[:], signingRoot[:]) {
+			return "", fmt.Errorf(
+				"provided signing_root != computed signing_root (provided=%s computed=%s)",
+				"0x"+hex.EncodeToString(req.SigningRoot[:]),
+				"0x"+hex.EncodeToString(signingRoot[:]),
+			)
+		}
+	}
+
+	sigHex, err := v.Sign(signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("bls sign: %w", err)
+	}
+
+	return sigHex, nil
+}
