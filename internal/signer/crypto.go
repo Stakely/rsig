@@ -159,6 +159,17 @@ func hashTreeRootVoluntaryExit(ve *VoluntaryExitData) (Bytes32, error) {
 	return out, nil
 }
 
+func hashTreeRootSyncAggregatorSelectionData(slot, subcommitteeIndex uint64) (Bytes32, error) {
+	slotChunk := hashTreeRootUint64(slot)
+	indexChunk := hashTreeRootUint64(subcommitteeIndex)
+
+	sum := sha256.Sum256(append(slotChunk[:], indexChunk[:]...))
+
+	var out Bytes32
+	copy(out[:], sum[:])
+	return out, nil
+}
+
 func computeDomainAttester(fi ForkInfo, targetEpoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainBeaconAttester, fi, targetEpoch)
 }
@@ -184,6 +195,10 @@ func computeDomainRandao(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
 
 func computeDomainSyncCommittee(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainSyncCommittee, fi, epoch)
+}
+
+func computeDomainSyncCommitteeSelectionProof(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+	return computeDomain(domainSyncCommitteeSelectionProof, fi, epoch)
 }
 
 func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain, error) {

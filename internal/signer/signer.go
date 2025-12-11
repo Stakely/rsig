@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"rsig/internal/slashing"
 	"rsig/internal/validator"
+	"strconv"
 )
 
 func SignAttestation(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashing.SlashingProtection) (string, error) {
@@ -322,6 +323,71 @@ func SignSyncCommitteeMessage(
 	domain, err := computeDomainSyncCommittee(*req.ForkInfo, epoch)
 	if err != nil {
 		return "", fmt.Errorf("compute sync committee domain: %w", err)
+	}
+
+	signingRoot, err := computeSigningRoot(objRoot, domain)
+	if err != nil {
+		return "", fmt.Errorf("compute signing root: %w", err)
+	}
+
+	if req.SigningRoot != nil {
+		if !bytes.Equal(req.SigningRoot[:], signingRoot[:]) {
+			return "", fmt.Errorf(
+				"provided signing_root != computed signing_root (provided=%s computed=%s)",
+				"0x"+hex.EncodeToString(req.SigningRoot[:]),
+				"0x"+hex.EncodeToString(signingRoot[:]),
+			)
+		}
+	}
+
+	sigHex, err := v.Sign(signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("bls sign: %w", err)
+	}
+
+	return sigHex, nil
+}
+
+func SignSyncCommitteeSelectionProof(
+	req Eth2SigningRequestBody,
+	v validator.ValidatorKey,
+) (string, error) {
+	if req.SyncAggregatorSelectionData == nil {
+		return "", errors.New("sync_aggregator_selection_data must be specified")
+	}
+	if req.ForkInfo == nil {
+		return "", errors.New("fork_info must be specified")
+	}
+
+	sel := req.SyncAggregatorSelectionData
+
+	if sel.Slot == "" {
+		return "", errors.New("sync_aggregator_selection_data.slot must be specified")
+	}
+	if sel.SubcommitteeIndex == "" {
+		return "", errors.New("sync_aggregator_selection_data.subcommittee_index must be specified")
+	}
+
+	slot, err := strconv.ParseUint(sel.Slot, 10, 64)
+	if err != nil {
+		return "", fmt.Errorf("invalid slot %q: %w", sel.Slot, err)
+	}
+
+	subIndex, err := strconv.ParseUint(sel.SubcommitteeIndex, 10, 64)
+	if err != nil {
+		return "", fmt.Errorf("invalid subcommittee_index %q: %w", sel.SubcommitteeIndex, err)
+	}
+
+	objRoot, err := hashTreeRootSyncAggregatorSelectionData(slot, subIndex)
+	if err != nil {
+		return "", fmt.Errorf("hash sync_aggregator_selection_data: %w", err)
+	}
+
+	epoch := slot / slotsPerEpoch
+
+	domain, err := computeDomainSyncCommitteeSelectionProof(*req.ForkInfo, epoch)
+	if err != nil {
+		return "", fmt.Errorf("compute sync committee selection proof domain: %w", err)
 	}
 
 	signingRoot, err := computeSigningRoot(objRoot, domain)
