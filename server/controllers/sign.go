@@ -44,12 +44,12 @@ func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey,
 			return
 		}
 
-		if req.Type != signer.ArtifactAttestation && req.Type != signer.ArtifactBlockV2 && req.Type != signer.AggregationSlot && req.Type != signer.AggregateAndProof && req.Type != signer.VoluntaryExit && req.Type != signer.RandaoReveal && req.Type != signer.SyncCommitteeMessage && req.Type != signer.SyncCommitteeSelectionProof && req.Type != signer.SyncCommitteeContributionAndProofType {
+		if req.Type != signer.ArtifactAttestation && req.Type != signer.ArtifactBlockV2 && req.Type != signer.AggregationSlot && req.Type != signer.AggregateAndProof && req.Type != signer.VoluntaryExit && req.Type != signer.RandaoReveal && req.Type != signer.SyncCommitteeMessage && req.Type != signer.SyncCommitteeSelectionProof && req.Type != signer.SyncCommitteeContributionAndProofType && req.Type != signer.ArtifactDeposit {
 			http.Error(w, "type not supported", http.StatusBadRequest)
 			return
 		}
 
-		if req.ForkInfo == nil {
+		if req.Type != signer.ArtifactDeposit && req.ForkInfo == nil {
 			http.Error(w, "fork_info must be specified", http.StatusBadRequest)
 			return
 		}
@@ -74,6 +74,8 @@ func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey,
 			sigHex, err = signer.SignSyncCommitteeSelectionProof(req, *vKey)
 		case signer.SyncCommitteeContributionAndProofType:
 			sigHex, err = signer.SignSyncCommitteeContributionAndProof(req, *vKey)
+		case signer.ArtifactDeposit:
+			sigHex, err = signer.SignDeposit(req, *vKey)
 		default:
 			http.Error(w, fmt.Sprintf("unsupported artifact type: %s", req.Type), http.StatusBadRequest)
 			return

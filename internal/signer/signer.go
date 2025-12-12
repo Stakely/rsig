@@ -465,3 +465,46 @@ func SignSyncCommitteeContributionAndProof(
 
 	return sigHex, nil
 }
+
+func SignDeposit(
+	req Eth2SigningRequestBody,
+	v validator.ValidatorKey,
+) (string, error) {
+	if req.Deposit == nil {
+		return "", errors.New("deposit must be specified")
+	}
+
+	d := req.Deposit
+
+	objRoot, err := hashTreeRootDepositMessage(d)
+	if err != nil {
+		return "", fmt.Errorf("hash deposit message SSZ: %w", err)
+	}
+
+	domain, err := computeDomainDeposit(d.GenesisForkVersion)
+	if err != nil {
+		return "", fmt.Errorf("compute deposit domain: %w", err)
+	}
+
+	signingRoot, err := computeSigningRoot(objRoot, domain)
+	if err != nil {
+		return "", fmt.Errorf("compute signing root: %w", err)
+	}
+
+	if req.SigningRoot != nil {
+		if !bytes.Equal(req.SigningRoot[:], signingRoot[:]) {
+			return "", fmt.Errorf(
+				"provided signing_root != computed signing_root (provided=%s computed=%s)",
+				"0x"+hex.EncodeToString(req.SigningRoot[:]),
+				"0x"+hex.EncodeToString(signingRoot[:]),
+			)
+		}
+	}
+
+	sigHex, err := v.Sign(signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("bls sign: %w", err)
+	}
+
+	return sigHex, nil
+}

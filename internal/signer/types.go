@@ -138,6 +138,7 @@ const (
 	SyncCommitteeMessage                  ArtifactType = "SYNC_COMMITTEE_MESSAGE"
 	SyncCommitteeSelectionProof           ArtifactType = "SYNC_COMMITTEE_SELECTION_PROOF"
 	SyncCommitteeContributionAndProofType ArtifactType = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"
+	ArtifactDeposit                       ArtifactType = "DEPOSIT"
 )
 
 type Fork struct {
@@ -231,6 +232,13 @@ type ContributionAndProofData struct {
 	Contribution    *SyncCommitteeContributionData `json:"contribution"`
 }
 
+type DepositData struct {
+	Pubkey                HexBytes `json:"pubkey"`
+	WithdrawalCredentials Bytes32  `json:"withdrawal_credentials"`
+	Amount                Uint64   `json:"amount"`
+	GenesisForkVersion    Bytes4   `json:"genesis_fork_version"`
+}
+
 type Eth2SigningRequestBody struct {
 	Type                        ArtifactType                 `json:"type"`
 	SigningRoot                 *Bytes32                     `json:"signingRoot,omitempty"`
@@ -244,6 +252,7 @@ type Eth2SigningRequestBody struct {
 	SyncCommitteeMessage        *SyncCommitteeMessageData    `json:"sync_committee_message,omitempty"`
 	SyncAggregatorSelectionData *SyncAggregatorSelectionData `json:"sync_aggregator_selection_data"`
 	ContributionAndProof        *ContributionAndProofData    `json:"contribution_and_proof,omitempty"`
+	Deposit                     *DepositData                 `json:"deposit,omitempty"`
 }
 
 func (r *Eth2SigningRequestBody) UnmarshalJSON(data []byte) error {
@@ -284,5 +293,6 @@ var domainRandao = [4]byte{0x02, 0x00, 0x00, 0x00}
 var domainSyncCommittee = [4]byte{0x07, 0x00, 0x00, 0x00}
 var domainSyncCommitteeSelectionProof = [4]byte{0x08, 0x00, 0x00, 0x00}
 var domainContributionAndProof = [4]byte{0x09, 0x00, 0x00, 0x00} // DOMAIN_CONTRIBUTION_AND_PROOF
+var domainDeposit = [4]byte{0x03, 0x00, 0x00, 0x00}
 
 const slotsPerEpoch = 32

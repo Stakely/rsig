@@ -205,6 +205,33 @@ func hashTreeRootContributionAndProof(cp *ContributionAndProofData) (Bytes32, er
 	return out, nil
 }
 
+func hashTreeRootDepositMessage(d *DepositData) (Bytes32, error) {
+	if d == nil {
+		return Bytes32{}, errors.New("nil deposit data")
+	}
+
+	var pk phase0.BLSPubKey
+	if len(d.Pubkey) != len(pk) {
+		return Bytes32{}, fmt.Errorf("deposit pubkey length invalid: expected %d, got %d", len(pk), len(d.Pubkey))
+	}
+	copy(pk[:], d.Pubkey)
+
+	dm := phase0.DepositMessage{
+		PublicKey:             pk,
+		WithdrawalCredentials: d.WithdrawalCredentials[:],
+		Amount:                phase0.Gwei(uint64(d.Amount)),
+	}
+
+	root, err := dm.HashTreeRoot()
+	if err != nil {
+		return Bytes32{}, fmt.Errorf("hash_tree_root(DepositMessage): %w", err)
+	}
+
+	var out Bytes32
+	copy(out[:], root[:])
+	return out, nil
+}
+
 func computeDomainAttester(fi ForkInfo, targetEpoch uint64) (phase0.Domain, error) {
 	return computeDomain(domainBeaconAttester, fi, targetEpoch)
 }
@@ -259,6 +286,22 @@ func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain
 
 	var d phase0.Domain
 	copy(d[:4], domainType[:])
+	copy(d[4:], fdr[0:28])
+	return d, nil
+}
+
+func computeDomainDeposit(genesisForkVersion Bytes4) (phase0.Domain, error) {
+	var fd phase0.ForkData
+	copy(fd.CurrentVersion[:], genesisForkVersion[:])
+	fd.GenesisValidatorsRoot = phase0.Root{}
+
+	fdr, err := fd.HashTreeRoot()
+	if err != nil {
+		return phase0.Domain{}, fmt.Errorf("hash_tree_root(ForkData): %w", err)
+	}
+
+	var d phase0.Domain
+	copy(d[:4], domainDeposit[:])
 	copy(d[4:], fdr[0:28])
 	return d, nil
 }
