@@ -14,6 +14,9 @@ type Bytes4 [4]byte
 type Uint64 uint64
 type HexBytes []byte
 
+type Bytes20 [20]byte
+type Bytes48 [48]byte
+
 func (b *Bytes96) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
@@ -126,6 +129,46 @@ func (u *Uint64) UnmarshalJSON(data []byte) error {
 	return fmt.Errorf("Uint64: expected number or decimal string")
 }
 
+func (b *Bytes20) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("Bytes20: expected string: %w", err)
+	}
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+		s = s[2:]
+	}
+	if len(s) != 40 {
+		return fmt.Errorf("Bytes20: expected 40 hex chars, got %d", len(s))
+	}
+	dst, err := hex.DecodeString(s)
+	if err != nil {
+		return fmt.Errorf("Bytes20: invalid hex: %w", err)
+	}
+	copy(b[:], dst)
+	return nil
+}
+
+func (b *Bytes48) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return fmt.Errorf("Bytes48: expected string: %w", err)
+	}
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+		s = s[2:]
+	}
+	if len(s) != 96 {
+		return fmt.Errorf("Bytes48: expected 96 hex chars, got %d", len(s))
+	}
+	dst, err := hex.DecodeString(s)
+	if err != nil {
+		return fmt.Errorf("Bytes48: invalid hex: %w", err)
+	}
+	copy(b[:], dst)
+	return nil
+}
+
 type ArtifactType string
 
 const (
@@ -139,6 +182,7 @@ const (
 	SyncCommitteeSelectionProof           ArtifactType = "SYNC_COMMITTEE_SELECTION_PROOF"
 	SyncCommitteeContributionAndProofType ArtifactType = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"
 	ArtifactDeposit                       ArtifactType = "DEPOSIT"
+	ValidatorRegistration                 ArtifactType = "VALIDATOR_REGISTRATION"
 )
 
 type Fork struct {
@@ -239,6 +283,13 @@ type DepositData struct {
 	GenesisForkVersion    Bytes4   `json:"genesis_fork_version"`
 }
 
+type ValidatorRegistrationData struct {
+	FeeRecipient Bytes20 `json:"fee_recipient"`
+	GasLimit     Uint64  `json:"gas_limit"`
+	Timestamp    Uint64  `json:"timestamp"`
+	Pubkey       Bytes48 `json:"pubkey"`
+}
+
 type Eth2SigningRequestBody struct {
 	Type                        ArtifactType                 `json:"type"`
 	SigningRoot                 *Bytes32                     `json:"signingRoot,omitempty"`
@@ -253,6 +304,7 @@ type Eth2SigningRequestBody struct {
 	SyncAggregatorSelectionData *SyncAggregatorSelectionData `json:"sync_aggregator_selection_data"`
 	ContributionAndProof        *ContributionAndProofData    `json:"contribution_and_proof,omitempty"`
 	Deposit                     *DepositData                 `json:"deposit,omitempty"`
+	ValidatorRegistration       *ValidatorRegistrationData   `json:"validator_registration,omitempty"`
 }
 
 func (r *Eth2SigningRequestBody) UnmarshalJSON(data []byte) error {
@@ -284,6 +336,7 @@ type SigningData struct {
 	Domain     [32]byte
 }
 
+var domainApplicationBuilder = [4]byte{0x00, 0x00, 0x00, 0x01}
 var domainBeaconAttester = [4]byte{0x01, 0x00, 0x00, 0x00}
 var domainBeaconProposer = [4]byte{0x00, 0x00, 0x00, 0x00}
 var domainSelectionProof = [4]byte{0x05, 0x00, 0x00, 0x00}
@@ -296,3 +349,5 @@ var domainContributionAndProof = [4]byte{0x09, 0x00, 0x00, 0x00} // DOMAIN_CONTR
 var domainDeposit = [4]byte{0x03, 0x00, 0x00, 0x00}
 
 const slotsPerEpoch = 32
+
+var genesisForkVersionApplicationBuilder Bytes4 = [4]byte{0x0, 0x00, 0x00, 0x01}

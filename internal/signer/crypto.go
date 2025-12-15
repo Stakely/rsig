@@ -267,6 +267,22 @@ func computeDomainContributionAndProof(fi ForkInfo, epoch uint64) (phase0.Domain
 	return computeDomain(domainContributionAndProof, fi, epoch)
 }
 
+func computeDomainApplicationBuilder() (phase0.Domain, error) {
+	var fd phase0.ForkData
+	copy(fd.CurrentVersion[:], genesisForkVersionApplicationBuilder[:])
+	fd.GenesisValidatorsRoot = phase0.Root{}
+
+	fdr, err := fd.HashTreeRoot()
+	if err != nil {
+		return phase0.Domain{}, fmt.Errorf("hash_tree_root(ForkData): %w", err)
+	}
+
+	var d phase0.Domain
+	copy(d[:4], domainApplicationBuilder[:])
+	copy(d[4:], fdr[0:28])
+	return d, nil
+}
+
 func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain, error) {
 	var forkVersion Bytes4
 	if epoch < uint64(fi.Fork.Epoch) {
@@ -337,6 +353,44 @@ func hashTreeRootBlockHeader(h *BeaconBlockHeader) (Bytes32, error) {
 	if err != nil {
 		return Bytes32{}, fmt.Errorf("hash_tree_root(BeaconBlockHeader): %w", err)
 	}
+
+	var out Bytes32
+	copy(out[:], root[:])
+	return out, nil
+}
+
+func hashTreeRootBytes20(b Bytes20) Bytes32 {
+	var out Bytes32
+	copy(out[:], b[:])
+	return out
+}
+
+func hashTreeRootBytes48(b Bytes48) Bytes32 {
+	var chunk1 [32]byte
+	var chunk2 [32]byte
+	copy(chunk1[:], b[0:32])
+	copy(chunk2[:], b[32:48])
+
+	sum := sha256.Sum256(append(chunk1[:], chunk2[:]...))
+
+	var out Bytes32
+	copy(out[:], sum[:])
+	return out
+}
+
+func hashTreeRootValidatorRegistration(vr *ValidatorRegistrationData) (Bytes32, error) {
+	if vr == nil {
+		return Bytes32{}, errors.New("nil validator_registration")
+	}
+
+	feeChunk := hashTreeRootBytes20(vr.FeeRecipient)
+	gasChunk := hashTreeRootUint64(uint64(vr.GasLimit))
+	timeChunk := hashTreeRootUint64(uint64(vr.Timestamp))
+	pkChunk := hashTreeRootBytes48(vr.Pubkey)
+
+	left := sha256.Sum256(append(feeChunk[:], gasChunk[:]...))
+	right := sha256.Sum256(append(timeChunk[:], pkChunk[:]...))
+	root := sha256.Sum256(append(left[:], right[:]...))
 
 	var out Bytes32
 	copy(out[:], root[:])

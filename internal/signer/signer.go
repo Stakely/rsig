@@ -508,3 +508,44 @@ func SignDeposit(
 
 	return sigHex, nil
 }
+
+func SignValidatorRegistration(
+	req Eth2SigningRequestBody,
+	v validator.ValidatorKey,
+) (string, error) {
+	if req.ValidatorRegistration == nil {
+		return "", errors.New("validator_registration must be specified")
+	}
+
+	objRoot, err := hashTreeRootValidatorRegistration(req.ValidatorRegistration)
+	if err != nil {
+		return "", fmt.Errorf("hash validator_registration SSZ: %w", err)
+	}
+
+	domain, err := computeDomainApplicationBuilder()
+	if err != nil {
+		return "", fmt.Errorf("compute validator_registration domain: %w", err)
+	}
+
+	signingRoot, err := computeSigningRoot(objRoot, domain)
+	if err != nil {
+		return "", fmt.Errorf("compute signing root: %w", err)
+	}
+
+	if req.SigningRoot != nil {
+		if !bytes.Equal(req.SigningRoot[:], signingRoot[:]) {
+			return "", fmt.Errorf(
+				"provided signing_root != computed signing_root (provided=%s computed=%s)",
+				"0x"+hex.EncodeToString(req.SigningRoot[:]),
+				"0x"+hex.EncodeToString(signingRoot[:]),
+			)
+		}
+	}
+
+	sigHex, err := v.Sign(signingRoot[:])
+	if err != nil {
+		return "", fmt.Errorf("bls sign: %w", err)
+	}
+
+	return sigHex, nil
+}
