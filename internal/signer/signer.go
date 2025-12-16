@@ -183,14 +183,25 @@ func SignAggregateAndProof(req Eth2SigningRequestBody, v validator.ValidatorKey)
 	if req.ForkInfo == nil {
 		return "", errors.New("fork_info must be specified")
 	}
-	if req.AggregateAndProof == nil {
+	if req.AggregateAndProof == nil || req.AggregateAndProof.Data == nil {
 		return "", errors.New("aggregate_and_proof must be specified")
 	}
 
-	ap := req.AggregateAndProof
+	ap := req.AggregateAndProof.Data
 	epoch := uint64(ap.Aggregate.Data.Target.Epoch)
 
-	objRoot, err := hashTreeRootAggregateAndProof(ap)
+	slot := uint64(ap.Aggregate.Data.Slot)
+	electraForkEpoch := uint64(364032)
+
+	includeCommitteeBits := slot >= electraForkEpoch*slotsPerEpoch
+
+	var objRoot Bytes32
+	var err error
+	if includeCommitteeBits {
+		objRoot, err = hashTreeRootAggregateAndProofV2(ap)
+	} else {
+		objRoot, err = hashTreeRootAggregateAndProof(ap)
+	}
 	if err != nil {
 		return "", fmt.Errorf("hash aggregate_and_proof SSZ: %w", err)
 	}
@@ -205,22 +216,14 @@ func SignAggregateAndProof(req Eth2SigningRequestBody, v validator.ValidatorKey)
 		return "", fmt.Errorf("compute signing root: %w", err)
 	}
 
-	if req.SigningRoot != nil {
-		if !bytes.Equal(req.SigningRoot[:], signingRoot[:]) {
-			return "", fmt.Errorf(
-				"provided signing_root != computed signing_root (provided=%s computed=%s)",
-				"0x"+hex.EncodeToString(req.SigningRoot[:]),
-				"0x"+hex.EncodeToString(signingRoot[:]),
-			)
-		}
+	if req.SigningRoot != nil && !bytes.Equal(req.SigningRoot[:], signingRoot[:]) {
+		return "", fmt.Errorf("provided signing_root != computed signing_root (provided=%s computed=%s)",
+			"0x"+hex.EncodeToString(req.SigningRoot[:]),
+			"0x"+hex.EncodeToString(signingRoot[:]),
+		)
 	}
 
-	sigHex, err := v.Sign(signingRoot[:])
-	if err != nil {
-		return "", fmt.Errorf("bls sign: %w", err)
-	}
-
-	return sigHex, nil
+	return v.Sign(signingRoot[:])
 }
 
 func SignVoluntaryExit(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {

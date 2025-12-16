@@ -183,6 +183,7 @@ const (
 	SyncCommitteeContributionAndProofType ArtifactType = "SYNC_COMMITTEE_CONTRIBUTION_AND_PROOF"
 	ArtifactDeposit                       ArtifactType = "DEPOSIT"
 	ValidatorRegistration                 ArtifactType = "VALIDATOR_REGISTRATION"
+	AggregateAndProofV2                   ArtifactType = "AGGREGATE_AND_PROOF_V2"
 )
 
 type Fork struct {
@@ -208,6 +209,7 @@ type AttestationData struct {
 
 type Attestation struct {
 	AggregationBits HexBytes        `json:"aggregation_bits"`
+	CommitteeBits   HexBytes        `json:"committee_bits,omitempty"`
 	Data            AttestationData `json:"data"`
 	Signature       Bytes96         `json:"signature"`
 }
@@ -258,8 +260,8 @@ type SyncCommitteeMessageData struct {
 }
 
 type SyncAggregatorSelectionData struct {
-	Slot              string `json:"slot"`               // uint64 en decimal, como en el resto
-	SubcommitteeIndex string `json:"subcommittee_index"` // uint64 en decimal
+	Slot              string `json:"slot"`
+	SubcommitteeIndex string `json:"subcommittee_index"`
 }
 
 type SyncCommitteeContributionData struct {
@@ -290,6 +292,45 @@ type ValidatorRegistrationData struct {
 	Pubkey       Bytes48 `json:"pubkey"`
 }
 
+type AggregateAndProofV2Data struct {
+	Version *string                `json:"version,omitempty"`
+	Data    *AggregateAndProofData `json:"data,omitempty"`
+}
+
+func (a *AggregateAndProofV2Data) UnmarshalJSON(b []byte) error {
+	var obj map[string]json.RawMessage
+	if err := json.Unmarshal(b, &obj); err != nil {
+		return fmt.Errorf("AggregateAndProofV2Data: invalid JSON: %w", err)
+	}
+
+	// v2
+	if rawData, ok := obj["data"]; ok {
+		if rawVer, ok := obj["version"]; ok && len(rawVer) > 0 && string(rawVer) != "null" {
+			var v string
+			if err := json.Unmarshal(rawVer, &v); err != nil {
+				return fmt.Errorf("AggregateAndProofV2Data: invalid version: %w", err)
+			}
+			v = strings.ToUpper(strings.TrimSpace(v))
+			a.Version = &v
+		}
+
+		var d AggregateAndProofData
+		if err := json.Unmarshal(rawData, &d); err != nil {
+			return fmt.Errorf("AggregateAndProofV2Data: invalid data: %w", err)
+		}
+		a.Data = &d
+		return nil
+	}
+
+	var d AggregateAndProofData
+	if err := json.Unmarshal(b, &d); err != nil {
+		return fmt.Errorf("AggregateAndProofV2Data: invalid legacy aggregate_and_proof: %w", err)
+	}
+	a.Version = nil
+	a.Data = &d
+	return nil
+}
+
 type Eth2SigningRequestBody struct {
 	Type                        ArtifactType                 `json:"type"`
 	SigningRoot                 *Bytes32                     `json:"signingRoot,omitempty"`
@@ -297,7 +338,7 @@ type Eth2SigningRequestBody struct {
 	Attestation                 *AttestationData             `json:"attestation,omitempty"`
 	BlockRequest                *BlockRequest                `json:"beacon_block,omitempty"`
 	AggregationSlot             *AggregationSlotData         `json:"aggregation_slot,omitempty"`
-	AggregateAndProof           *AggregateAndProofData       `json:"aggregate_and_proof,omitempty"`
+	AggregateAndProof           *AggregateAndProofV2Data     `json:"aggregate_and_proof,omitempty"`
 	VoluntaryExit               *VoluntaryExitData           `json:"voluntary_exit,omitempty"`
 	RandaoReveal                *RandaoRevealData            `json:"randao_reveal,omitempty"`
 	SyncCommitteeMessage        *SyncCommitteeMessageData    `json:"sync_committee_message,omitempty"`
