@@ -3,9 +3,13 @@
 # =========================
 FROM golang:1.25-alpine AS builder
 
-ENV CGO_ENABLED=0 \
+# CGO is required for herumi/bls-eth-go-binary
+ENV CGO_ENABLED=1 \
     GOOS=linux \
     GOARCH=amd64
+
+# Install build dependencies for CGO
+RUN apk add --no-cache gcc musl-dev
 
 WORKDIR /app
 COPY go.mod go.sum ./
@@ -18,7 +22,10 @@ RUN go build -o /app/bin/app ./cmd/...
 # Stage 2: runtime
 # =========================
 FROM alpine:3.20
-RUN adduser -D -u 10001 appuser
+
+# Install runtime dependencies for CGO binary
+RUN apk add --no-cache libc6-compat && \
+    adduser -D -u 10001 appuser
 
 WORKDIR /home/appuser
 
