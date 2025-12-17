@@ -224,3 +224,13 @@ No `SECP256K1` execution-layer keys are supported yet in this loader.
 
 In all cases, the loader walks `keystore_path` and imports every key definition it finds.
 **Only BLS validator keys are supported.**
+
+---
+
+## CI/CD
+
+This repository uses GitHub Actions for continuous integration and deployment. See [`.github/workflows/README.md`](.github/workflows/README.md) for details on:
+
+- Workflow triggers and job structure
+- Required secrets and variables
+- Docker image tagging conventions
