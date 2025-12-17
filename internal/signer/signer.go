@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func SignAttestation(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashing.SlashingProtection) (string, error) {
+func SignAttestation(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashing.SlashingProtection, cs ChainSpecs) (string, error) {
 	if req.Attestation == nil {
 		return "", errors.New("attestation must be specified")
 	}
@@ -24,7 +24,7 @@ func SignAttestation(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *s
 	}
 
 	epoch := uint64(req.Attestation.Target.Epoch)
-	domain, err := computeDomainAttester(*req.ForkInfo, epoch)
+	domain, err := computeDomainAttester(*req.ForkInfo, epoch, cs.DomainBeaconAttester)
 	if err != nil {
 		return "", fmt.Errorf("compute attester domain: %w", err)
 	}
@@ -73,7 +73,7 @@ func SignAttestation(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *s
 	return sigHex, nil
 }
 
-func SignBlock(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashing.SlashingProtection) (string, error) {
+func SignBlock(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashing.SlashingProtection, cs ChainSpecs) (string, error) {
 	if req.ForkInfo == nil {
 		return "", errors.New("fork_info must be specified")
 	}
@@ -87,9 +87,9 @@ func SignBlock(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashin
 	if err != nil {
 		return "", fmt.Errorf("get block slot: %w", err)
 	}
-	epoch := slot / slotsPerEpoch
+	epoch := slot / cs.SlotsPerEpoch
 
-	domain, err := computeDomainProposer(*req.ForkInfo, epoch)
+	domain, err := computeDomainProposer(*req.ForkInfo, epoch, cs.DomainBeaconProposer)
 	if err != nil {
 		return "", fmt.Errorf("compute proposer domain: %w", err)
 	}
@@ -138,7 +138,7 @@ func SignBlock(req Eth2SigningRequestBody, v validator.ValidatorKey, sp *slashin
 	return sigHex, nil
 }
 
-func SignAggregationSlot(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {
+func SignAggregationSlot(req Eth2SigningRequestBody, v validator.ValidatorKey, cs ChainSpecs) (string, error) {
 	if req.ForkInfo == nil {
 		return "", errors.New("fork_info must be specified")
 	}
@@ -147,11 +147,11 @@ func SignAggregationSlot(req Eth2SigningRequestBody, v validator.ValidatorKey) (
 	}
 
 	slot := uint64(req.AggregationSlot.Slot)
-	epoch := slot / slotsPerEpoch
+	epoch := slot / cs.SlotsPerEpoch
 
 	objectRoot := hashTreeRootUint64(slot)
 
-	domain, err := computeDomainAggregationSlot(*req.ForkInfo, epoch)
+	domain, err := computeDomainAggregationSlot(*req.ForkInfo, epoch, cs.DomainSelectionProof)
 	if err != nil {
 		return "", fmt.Errorf("compute aggregation slot domain: %w", err)
 	}
@@ -179,7 +179,7 @@ func SignAggregationSlot(req Eth2SigningRequestBody, v validator.ValidatorKey) (
 	return sigHex, nil
 }
 
-func SignAggregateAndProof(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {
+func SignAggregateAndProof(req Eth2SigningRequestBody, v validator.ValidatorKey, cs ChainSpecs) (string, error) {
 	if req.ForkInfo == nil {
 		return "", errors.New("fork_info must be specified")
 	}
@@ -193,7 +193,7 @@ func SignAggregateAndProof(req Eth2SigningRequestBody, v validator.ValidatorKey)
 	slot := uint64(ap.Aggregate.Data.Slot)
 	electraForkEpoch := uint64(364032)
 
-	includeCommitteeBits := slot >= electraForkEpoch*slotsPerEpoch
+	includeCommitteeBits := slot >= electraForkEpoch*cs.SlotsPerEpoch
 
 	var objRoot Bytes32
 	var err error
@@ -206,7 +206,7 @@ func SignAggregateAndProof(req Eth2SigningRequestBody, v validator.ValidatorKey)
 		return "", fmt.Errorf("hash aggregate_and_proof SSZ: %w", err)
 	}
 
-	domain, err := computeDomainAggregateAndProof(*req.ForkInfo, epoch)
+	domain, err := computeDomainAggregateAndProof(*req.ForkInfo, epoch, cs.DomainAggregateAndProof)
 	if err != nil {
 		return "", fmt.Errorf("compute aggregate_and_proof domain: %w", err)
 	}
@@ -226,7 +226,7 @@ func SignAggregateAndProof(req Eth2SigningRequestBody, v validator.ValidatorKey)
 	return v.Sign(signingRoot[:])
 }
 
-func SignVoluntaryExit(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {
+func SignVoluntaryExit(req Eth2SigningRequestBody, v validator.ValidatorKey, cs ChainSpecs) (string, error) {
 	if req.ForkInfo == nil {
 		return "", errors.New("fork_info must be specified")
 	}
@@ -241,7 +241,7 @@ func SignVoluntaryExit(req Eth2SigningRequestBody, v validator.ValidatorKey) (st
 		return "", fmt.Errorf("hash voluntary_exit SSZ: %w", err)
 	}
 
-	domain, err := computeDomainVoluntaryExit(*req.ForkInfo, epoch)
+	domain, err := computeDomainVoluntaryExit(*req.ForkInfo, epoch, cs.DomainVoluntaryExit)
 	if err != nil {
 		return "", fmt.Errorf("compute voluntary_exit domain: %w", err)
 	}
@@ -269,7 +269,7 @@ func SignVoluntaryExit(req Eth2SigningRequestBody, v validator.ValidatorKey) (st
 	return sigHex, nil
 }
 
-func SignRandaoReveal(req Eth2SigningRequestBody, v validator.ValidatorKey) (string, error) {
+func SignRandaoReveal(req Eth2SigningRequestBody, v validator.ValidatorKey, cs ChainSpecs) (string, error) {
 	if req.ForkInfo == nil {
 		return "", errors.New("fork_info must be specified")
 	}
@@ -280,7 +280,7 @@ func SignRandaoReveal(req Eth2SigningRequestBody, v validator.ValidatorKey) (str
 	epoch := uint64(req.RandaoReveal.Epoch)
 	objectRoot := hashTreeRootUint64(epoch)
 
-	domain, err := computeDomainRandao(*req.ForkInfo, epoch)
+	domain, err := computeDomainRandao(*req.ForkInfo, epoch, cs.DomainRandao)
 	if err != nil {
 		return "", fmt.Errorf("compute randao domain: %w", err)
 	}
@@ -311,6 +311,7 @@ func SignRandaoReveal(req Eth2SigningRequestBody, v validator.ValidatorKey) (str
 func SignSyncCommitteeMessage(
 	req Eth2SigningRequestBody,
 	v validator.ValidatorKey,
+	cs ChainSpecs,
 ) (string, error) {
 	if req.SyncCommitteeMessage == nil {
 		return "", errors.New("sync_committee_message must be specified")
@@ -321,9 +322,9 @@ func SignSyncCommitteeMessage(
 
 	objRoot := req.SyncCommitteeMessage.BeaconBlockRoot
 	slot := uint64(req.SyncCommitteeMessage.Slot)
-	epoch := slot / slotsPerEpoch
+	epoch := slot / cs.SlotsPerEpoch
 
-	domain, err := computeDomainSyncCommittee(*req.ForkInfo, epoch)
+	domain, err := computeDomainSyncCommittee(*req.ForkInfo, epoch, cs.DomainSyncCommittee)
 	if err != nil {
 		return "", fmt.Errorf("compute sync committee domain: %w", err)
 	}
@@ -354,6 +355,7 @@ func SignSyncCommitteeMessage(
 func SignSyncCommitteeSelectionProof(
 	req Eth2SigningRequestBody,
 	v validator.ValidatorKey,
+	cs ChainSpecs,
 ) (string, error) {
 	if req.SyncAggregatorSelectionData == nil {
 		return "", errors.New("sync_aggregator_selection_data must be specified")
@@ -386,9 +388,9 @@ func SignSyncCommitteeSelectionProof(
 		return "", fmt.Errorf("hash sync_aggregator_selection_data: %w", err)
 	}
 
-	epoch := slot / slotsPerEpoch
+	epoch := slot / cs.SlotsPerEpoch
 
-	domain, err := computeDomainSyncCommitteeSelectionProof(*req.ForkInfo, epoch)
+	domain, err := computeDomainSyncCommitteeSelectionProof(*req.ForkInfo, epoch, cs.DomainSyncCommitteeSelectionProof)
 	if err != nil {
 		return "", fmt.Errorf("compute sync committee selection proof domain: %w", err)
 	}
@@ -419,6 +421,7 @@ func SignSyncCommitteeSelectionProof(
 func SignSyncCommitteeContributionAndProof(
 	req Eth2SigningRequestBody,
 	v validator.ValidatorKey,
+	cs ChainSpecs,
 ) (string, error) {
 	if req.ForkInfo == nil {
 		return "", errors.New("fork_info must be specified")
@@ -434,14 +437,14 @@ func SignSyncCommitteeContributionAndProof(
 	contrib := cp.Contribution
 
 	slot := uint64(contrib.Slot)
-	epoch := slot / slotsPerEpoch
+	epoch := slot / cs.SlotsPerEpoch
 
 	objRoot, err := hashTreeRootContributionAndProof(cp)
 	if err != nil {
 		return "", fmt.Errorf("hash contribution_and_proof SSZ: %w", err)
 	}
 
-	domain, err := computeDomainContributionAndProof(*req.ForkInfo, epoch)
+	domain, err := computeDomainContributionAndProof(*req.ForkInfo, epoch, cs.DomainContributionAndProof)
 	if err != nil {
 		return "", fmt.Errorf("compute contribution_and_proof domain: %w", err)
 	}
@@ -472,6 +475,7 @@ func SignSyncCommitteeContributionAndProof(
 func SignDeposit(
 	req Eth2SigningRequestBody,
 	v validator.ValidatorKey,
+	cs ChainSpecs,
 ) (string, error) {
 	if req.Deposit == nil {
 		return "", errors.New("deposit must be specified")
@@ -484,7 +488,7 @@ func SignDeposit(
 		return "", fmt.Errorf("hash deposit message SSZ: %w", err)
 	}
 
-	domain, err := computeDomainDeposit(d.GenesisForkVersion)
+	domain, err := computeDomainDeposit(d.GenesisForkVersion, cs.DomainDeposit)
 	if err != nil {
 		return "", fmt.Errorf("compute deposit domain: %w", err)
 	}
@@ -515,6 +519,7 @@ func SignDeposit(
 func SignValidatorRegistration(
 	req Eth2SigningRequestBody,
 	v validator.ValidatorKey,
+	cs ChainSpecs,
 ) (string, error) {
 	if req.ValidatorRegistration == nil {
 		return "", errors.New("validator_registration must be specified")
@@ -525,7 +530,7 @@ func SignValidatorRegistration(
 		return "", fmt.Errorf("hash validator_registration SSZ: %w", err)
 	}
 
-	domain, err := computeDomainApplicationBuilder()
+	domain, err := computeDomainApplicationBuilder(cs)
 	if err != nil {
 		return "", fmt.Errorf("compute validator_registration domain: %w", err)
 	}

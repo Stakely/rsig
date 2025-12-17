@@ -5,14 +5,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"rsig/internal/config"
 	"rsig/internal/signer"
 	"rsig/internal/slashing"
 	"rsig/internal/validator"
 	"strings"
 )
 
-func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey, sp *slashing.SlashingProtection, prefix string) {
-	mux.HandleFunc(prefix+"/sign/", func(w http.ResponseWriter, r *http.Request) {
+func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey, sp *slashing.SlashingProtection, cfg config.Config) {
+	mux.HandleFunc(cfg.HTTP.ApiPrefix+"/sign/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -57,32 +58,34 @@ func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey,
 			return
 		}
 
+		cs, err := signer.LoadChainSpecs(cfg.NETWORK.Chain, cfg.NETWORK.ConfigSpec)
+
 		var sigHex string
 		switch req.Type {
 		case signer.ArtifactAttestation:
-			sigHex, err = signer.SignAttestation(req, *vKey, sp)
+			sigHex, err = signer.SignAttestation(req, *vKey, sp, cs)
 		case signer.ArtifactBlockV2:
-			sigHex, err = signer.SignBlock(req, *vKey, sp)
+			sigHex, err = signer.SignBlock(req, *vKey, sp, cs)
 		case signer.AggregationSlot:
-			sigHex, err = signer.SignAggregationSlot(req, *vKey)
+			sigHex, err = signer.SignAggregationSlot(req, *vKey, cs)
 		case signer.AggregateAndProof:
-			sigHex, err = signer.SignAggregateAndProof(req, *vKey)
+			sigHex, err = signer.SignAggregateAndProof(req, *vKey, cs)
 		case signer.VoluntaryExit:
-			sigHex, err = signer.SignVoluntaryExit(req, *vKey)
+			sigHex, err = signer.SignVoluntaryExit(req, *vKey, cs)
 		case signer.RandaoReveal:
-			sigHex, err = signer.SignRandaoReveal(req, *vKey)
+			sigHex, err = signer.SignRandaoReveal(req, *vKey, cs)
 		case signer.SyncCommitteeMessage:
-			sigHex, err = signer.SignSyncCommitteeMessage(req, *vKey)
+			sigHex, err = signer.SignSyncCommitteeMessage(req, *vKey, cs)
 		case signer.SyncCommitteeSelectionProof:
-			sigHex, err = signer.SignSyncCommitteeSelectionProof(req, *vKey)
+			sigHex, err = signer.SignSyncCommitteeSelectionProof(req, *vKey, cs)
 		case signer.SyncCommitteeContributionAndProofType:
-			sigHex, err = signer.SignSyncCommitteeContributionAndProof(req, *vKey)
+			sigHex, err = signer.SignSyncCommitteeContributionAndProof(req, *vKey, cs)
 		case signer.ArtifactDeposit:
-			sigHex, err = signer.SignDeposit(req, *vKey)
+			sigHex, err = signer.SignDeposit(req, *vKey, cs)
 		case signer.ValidatorRegistration:
-			sigHex, err = signer.SignValidatorRegistration(req, *vKey)
+			sigHex, err = signer.SignValidatorRegistration(req, *vKey, cs)
 		case signer.AggregateAndProofV2:
-			sigHex, err = signer.SignAggregateAndProof(req, *vKey)
+			sigHex, err = signer.SignAggregateAndProof(req, *vKey, cs)
 		default:
 			http.Error(w, fmt.Sprintf("unsupported artifact type: %s", req.Type), http.StatusBadRequest)
 			return

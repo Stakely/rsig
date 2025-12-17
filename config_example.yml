@@ -1,8 +1,11 @@
+network:
+  chain: mainnet
+  # config_spec: /path/to/config_spec
 validators:
   keystore_path: '/path/to/keystore'
   keystore_password_path: '/path/to/passwords'
 http:
   port: 80
-  api_prefix: '/'
+  # api_prefix: '/'
 database:
   dsn: ''

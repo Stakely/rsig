@@ -308,44 +308,44 @@ func hashTreeRootDepositMessage(d *DepositData) (Bytes32, error) {
 	return out, nil
 }
 
-func computeDomainAttester(fi ForkInfo, targetEpoch uint64) (phase0.Domain, error) {
+func computeDomainAttester(fi ForkInfo, targetEpoch uint64, domainBeaconAttester Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainBeaconAttester, fi, targetEpoch)
 }
 
-func computeDomainProposer(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+func computeDomainProposer(fi ForkInfo, epoch uint64, domainBeaconProposer Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainBeaconProposer, fi, epoch)
 }
 
-func computeDomainAggregationSlot(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+func computeDomainAggregationSlot(fi ForkInfo, epoch uint64, domainSelectionProof Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainSelectionProof, fi, epoch)
 }
 
-func computeDomainAggregateAndProof(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+func computeDomainAggregateAndProof(fi ForkInfo, epoch uint64, domainAggregateAndProof Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainAggregateAndProof, fi, epoch)
 }
-func computeDomainVoluntaryExit(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+func computeDomainVoluntaryExit(fi ForkInfo, epoch uint64, domainVoluntaryExit Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainVoluntaryExit, fi, epoch)
 }
 
-func computeDomainRandao(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+func computeDomainRandao(fi ForkInfo, epoch uint64, domainRandao Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainRandao, fi, epoch)
 }
 
-func computeDomainSyncCommittee(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+func computeDomainSyncCommittee(fi ForkInfo, epoch uint64, domainSyncCommittee Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainSyncCommittee, fi, epoch)
 }
 
-func computeDomainSyncCommitteeSelectionProof(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+func computeDomainSyncCommitteeSelectionProof(fi ForkInfo, epoch uint64, domainSyncCommitteeSelectionProof Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainSyncCommitteeSelectionProof, fi, epoch)
 }
 
-func computeDomainContributionAndProof(fi ForkInfo, epoch uint64) (phase0.Domain, error) {
+func computeDomainContributionAndProof(fi ForkInfo, epoch uint64, domainContributionAndProof Bytes4) (phase0.Domain, error) {
 	return computeDomain(domainContributionAndProof, fi, epoch)
 }
 
-func computeDomainApplicationBuilder() (phase0.Domain, error) {
+func computeDomainApplicationBuilder(cs ChainSpecs) (phase0.Domain, error) {
 	var fd phase0.ForkData
-	copy(fd.CurrentVersion[:], genesisForkVersionApplicationBuilder[:])
+	copy(fd.CurrentVersion[:], cs.DomainApplicationMask[:])
 	fd.GenesisValidatorsRoot = phase0.Root{}
 
 	fdr, err := fd.HashTreeRoot()
@@ -354,7 +354,7 @@ func computeDomainApplicationBuilder() (phase0.Domain, error) {
 	}
 
 	var d phase0.Domain
-	copy(d[:4], domainApplicationBuilder[:])
+	copy(d[:4], cs.DomainApplicationMask[:])
 	copy(d[4:], fdr[0:28])
 	return d, nil
 }
@@ -382,7 +382,7 @@ func computeDomain(domainType [4]byte, fi ForkInfo, epoch uint64) (phase0.Domain
 	return d, nil
 }
 
-func computeDomainDeposit(genesisForkVersion Bytes4) (phase0.Domain, error) {
+func computeDomainDeposit(genesisForkVersion Bytes4, domainDeposit Bytes4) (phase0.Domain, error) {
 	var fd phase0.ForkData
 	copy(fd.CurrentVersion[:], genesisForkVersion[:])
 	fd.GenesisValidatorsRoot = phase0.Root{}

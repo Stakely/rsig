@@ -1,5 +1,5 @@
 # KUIPER SIGNER
-Monorepo for the RSIG application. This repository follows a **ports-and-adapters** (hexagonal) layout:
+Monorepo for the Kuiper Signer application. This repository follows a **ports-and-adapters** (hexagonal) layout:
 
 - `cmd/`: CLI entry points (adapters).
 - `server/`: HTTP API adapter (routing, controllers).
@@ -27,6 +27,9 @@ Use YAML format:
 
 ```yaml
 # config_example.yaml
+network:
+  chain: #NETWORK_CHAIN
+  config_spec: #NETWORK_CONFIG_SPEC
 validators:
   keystore_path: #VALIDATORS_KEYSTORE_PATH
   keystore_password_path: #VALIDATORS_KEYSTORE_PASSWORD_PATH
@@ -49,6 +52,37 @@ That means:
 - If none of the above are provided, defaults are used.
 
 **Example**: if `database.dsn` is set in `config.yaml` but `DATABASE_DSN` is also set in the environment, the app will use `DATABASE_DSN` unless you override it with a `--dsn` flag.
+
+## Network
+
+The `network` config determines **which chain** `Kuiper Signer` runs against and **where** it loads the consensus *specs* required to compute signatures.
+
+### Supported values
+
+- `mainnet`
+- `hoodi`
+- `custom`
+
+### Behavior
+
+- **`mainnet` / `hoodi`**
+    - `network.config_spec` is **optional**.
+    - If not provided, `Kuiper Signer` automatically loads the default spec file:
+        - `spec_config_mainnet.json` for `mainnet`
+        - `spec_config_hoodi.json` for `hoodi`
+
+- **`custom`**
+    - `network.config_spec` becomes **required**.
+    - It must point to a compatible spec JSON containing the values needed to compute signatures (domains, fork versions/epochs, `SLOTS_PER_EPOCH`, etc.).
+
+#### Example
+
+```yaml
+network:
+  chain: hoodi # mainnet | hoodi | custom
+  # config_spec: /path/to/specs.json  # required if chain=custom
+```
+
 ## Keystore support
 
 All keys are loaded by scanning every file found under a given `keystore_path`.

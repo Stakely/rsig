@@ -9,6 +9,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+type NETWORK struct {
+	Chain      string `mapstructure:"chain"`
+	ConfigSpec string `mapstructure:"config_spec"`
+}
+
 type HTTP struct {
 	Port      int    `mapstructure:"port"`
 	ApiPrefix string `mapstructure:"api_prefix"`
@@ -22,22 +27,31 @@ type VALIDATORS struct {
 	KeystorePath         string `mapstructure:"keystore_path"`
 	KeyStorePasswordPath string `mapstructure:"keystore_password_path"`
 }
+
 type Config struct {
+	NETWORK    NETWORK    `mapstructure:"network"`
 	HTTP       HTTP       `mapstructure:"http"`
 	DATABASE   DATABASE   `mapstructure:"database"`
 	VALIDATORS VALIDATORS `mapstructure:"validators"`
 }
 
 var (
-	once   sync.Once
-	mu     sync.RWMutex
-	c      = Config{HTTP: HTTP{Port: 8080}, DATABASE: DATABASE{DbDsn: ""}, VALIDATORS: VALIDATORS{KeystorePath: "", KeyStorePasswordPath: ""}}
+	once sync.Once
+	mu   sync.RWMutex
+	c    = Config{
+		NETWORK:    NETWORK{Chain: "mainnet", ConfigSpec: ""},
+		HTTP:       HTTP{Port: 8080, ApiPrefix: "/"},
+		DATABASE:   DATABASE{DbDsn: ""},
+		VALIDATORS: VALIDATORS{KeystorePath: "", KeyStorePasswordPath: ""},
+	}
 	inited bool
 )
 
 func Init(cfgFile string) (err error) {
 	once.Do(func() {
 		// Defaults
+		viper.SetDefault("network.chain", "mainnet")
+		viper.SetDefault("network.config_spec", "")
 		viper.SetDefault("http.port", 8080)
 		viper.SetDefault("http.api_prefix", "/")
 		viper.SetDefault("database.dsn", "")
@@ -54,6 +68,8 @@ func Init(cfgFile string) (err error) {
 			viper.AddConfigPath("$HOME/.config/rsig")
 		}
 
+		_ = viper.BindEnv("network.chain", "NETWORK_CHAIN")
+		_ = viper.BindEnv("network.config_spec", "NETWORK_CONFIG_SPEC")
 		_ = viper.BindEnv("http.port", "HTTP_PORT")
 		_ = viper.BindEnv("http.api_prefix", "HTTP_API_PREFIX")
 		_ = viper.BindEnv("database.dsn", "DATABASE_DSN")

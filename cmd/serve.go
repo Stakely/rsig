@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +21,8 @@ var (
 	keystorePasswordPath string
 	port                 int
 	dbDsn                string
+	network              string
+	networkConfigSpec    string
 )
 
 var serveCmd = &cobra.Command{
@@ -41,6 +44,29 @@ var serveCmd = &cobra.Command{
 		}
 		if keystorePasswordPath != "" {
 			cfg.VALIDATORS.KeyStorePasswordPath = keystorePasswordPath
+		}
+		if network != "" {
+			cfg.NETWORK.Chain = network
+		}
+		if networkConfigSpec != "" {
+			cfg.NETWORK.ConfigSpec = networkConfigSpec
+		}
+
+		switch cfg.NETWORK.Chain {
+		case "mainnet", "hoodi", "custom":
+		case "":
+			cfg.NETWORK.Chain = "mainnet"
+		default:
+			return fmt.Errorf("invalid network.chain: %q (allowed: mainnet | hoodi | custom)", cfg.NETWORK.Chain)
+		}
+
+		if cfg.NETWORK.Chain == "custom" {
+			if cfg.NETWORK.ConfigSpec == "" {
+				return fmt.Errorf("network.config_spec is required for custom network")
+			}
+			if !fileExists(cfg.NETWORK.ConfigSpec) {
+				return fmt.Errorf("network.config_spec does not exist: %q", cfg.NETWORK.ConfigSpec)
+			}
 		}
 
 		app, cleanup, err := server.BuildHttpApi(ctx, cfg)
@@ -85,5 +111,15 @@ func init() {
 	serveCmd.Flags().StringVar(&keystorePasswordPath, "keystore-password-path", "", "Path to the V4 keystore password file")
 	serveCmd.Flags().IntVar(&port, "port", 0, "Port to listen on")
 	serveCmd.Flags().StringVar(&dbDsn, "db-dsn", "", "DSN to connect to the database")
+	serveCmd.Flags().StringVar(&network, "network", "", "Network used. Can be 'mainnet', 'hoodi', or 'custom'")
+	serveCmd.Flags().StringVar(&networkConfigSpec, "network-config-spec", "", "Specs config file path for the custom network.")
 	rootCmd.AddCommand(serveCmd)
+}
+
+func fileExists(path string) bool {
+	if path == "" {
+		return false
+	}
+	st, err := os.Stat(path)
+	return err == nil && !st.IsDir()
 }

@@ -10,7 +10,7 @@ import (
 func RegisterControllers(mux *http.ServeMux, keys map[string]*validator.ValidatorKey, sp *slashing.SlashingProtection, cfg config.Config) {
 	prefix := normalizePrefix(cfg.HTTP.ApiPrefix)
 	mux.HandleFunc(prefix+"/healthz", func(w http.ResponseWriter, r *http.Request) {})
-	signController(mux, keys, sp, prefix)
+	signController(mux, keys, sp, cfg)
 }
 
 func normalizePrefix(p string) string {
