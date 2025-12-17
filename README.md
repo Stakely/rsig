@@ -1,4 +1,4 @@
-# RSIG
+# KUIPER SIGNER
 Monorepo for the RSIG application. This repository follows a **ports-and-adapters** (hexagonal) layout:
 
 - `cmd/`: CLI entry points (adapters).
@@ -36,6 +36,18 @@ database:
   dsn: #DATABASE_DSN
 ```
 
+### Configuration precedence
+This project can be configured using CLI flags, environment variables, and a config file. When the same setting is provided in multiple places, the value is chosen using the following precedence order (from highest to lowest):
+
+`FLAGS > ENV > CONFIG FILE > DEFAULTS`
+
+That means:
+- Flags always win (useful for one-off runs and overrides).
+- If no flag is provided, the app falls back to environment variables (recommended for Docker/CI/Kubernetes and secrets).
+- If no env var is provided, it uses the value from the config file (useful for local and persistent configuration).
+- If none of the above are provided, defaults are used.
+
+**Example**: if `database.dsn` is set in `config.yaml` but `DATABASE_DSN` is also set in the environment, the app will use `DATABASE_DSN` unless you override it with a `--dsn` flag.
 ## Keystore support
 
 All keys are loaded by scanning every file found under a given `keystore_path`.
