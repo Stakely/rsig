@@ -89,15 +89,25 @@ jobs:
           echo "COMMIT_AUTHOR=$(git log -1 --pretty=%an)" >> $GITHUB_ENV
           echo "BRANCH_NAME=${GITHUB_REF_NAME}" >> $GITHUB_ENV
 
-      - name: Determine workflow status
+      - name: Determine workflow status and summary
         id: status
         run: |
+          # Determine overall status
           if [[ "${{ needs.test.result }}" == "failure" || "${{ needs.build.result }}" == "failure" ]]; then
             echo "result=failure" >> $GITHUB_OUTPUT
           elif [[ "${{ needs.test.result }}" == "cancelled" || "${{ needs.build.result }}" == "cancelled" ]]; then
             echo "result=cancelled" >> $GITHUB_OUTPUT
           else
             echo "result=success" >> $GITHUB_OUTPUT
+          fi
+
+          # Determine what was executed
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "workflow_type=full" >> $GITHUB_OUTPUT
+            echo "summary=Tests + Build + Push to DockerHub (stakely/kuiper-signer:latest)" >> $GITHUB_OUTPUT
+          else
+            echo "workflow_type=tests_only" >> $GITHUB_OUTPUT
+            echo "summary=Tests only (no build on develop)" >> $GITHUB_OUTPUT
           fi
 
       - name: Send Discord notification on success
@@ -109,10 +119,11 @@ jobs:
           avatar-url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
           embed-color: '3066993'
           embed-description: |
-            Workflow _${{ github.workflow }}_ in repository https://github.com/${{ github.repository }}/tree/${{ env.BRANCH_NAME }} has completed successfully.
+            ✅ **${{ steps.status.outputs.summary }}**
+
+            Repository: https://github.com/${{ github.repository }}/tree/${{ env.BRANCH_NAME }}
             - **Commit**: _${{ env.COMMIT_MESSAGE }}_ by _${{ env.COMMIT_AUTHOR }}_
-            - **Branch**: ${{ github.ref_name }}
-            - **Status**: Success
+            - **Branch**: `${{ github.ref_name }}`
 
       - name: Send Discord notification on failure
         if: steps.status.outputs.result == 'failure'
@@ -123,54 +134,11 @@ jobs:
           avatar-url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
           embed-color: '15158332'
           embed-description: |
-            Error with the workflow _${{ github.workflow }}_ in https://github.com/${{ github.repository }}/actions.
-            Nothing will be deployed until this is fixed.
+            ❌ **Pipeline failed: ${{ steps.status.outputs.summary }}**
+
+            Check logs: https://github.com/${{ github.repository }}/actions
             - **Commit**: _${{ env.COMMIT_MESSAGE }}_ by _${{ env.COMMIT_AUTHOR }}_
-            - **Branch**: ${{ github.ref_name }}
-            - **Status**: Failed
-
-  notify-develop:
-    name: Discord Notification (Develop)
-    runs-on: ubuntu-latest
-    needs: test
-    if: always() && github.ref == 'refs/heads/develop'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set commit info
-        run: |
-          echo "COMMIT_MESSAGE=$(git log -1 --pretty=%B | head -n1)" >> $GITHUB_ENV
-          echo "COMMIT_AUTHOR=$(git log -1 --pretty=%an)" >> $GITHUB_ENV
-          echo "BRANCH_NAME=${GITHUB_REF_NAME}" >> $GITHUB_ENV
-
-      - name: Send Discord notification on success
-        if: needs.test.result == 'success'
-        uses: tsickert/discord-webhook@v5.3.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          username: 'GitHub Actions'
-          avatar-url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-          embed-color: '3066993'
-          embed-description: |
-            Workflow _${{ github.workflow }}_ in repository https://github.com/${{ github.repository }}/tree/${{ env.BRANCH_NAME }} has completed successfully.
-            - **Commit**: _${{ env.COMMIT_MESSAGE }}_ by _${{ env.COMMIT_AUTHOR }}_
-            - **Branch**: ${{ github.ref_name }}
-            - **Status**: Success
-
-      - name: Send Discord notification on failure
-        if: needs.test.result == 'failure'
-        uses: tsickert/discord-webhook@v5.3.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          username: 'GitHub Actions'
-          avatar-url: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png'
-          embed-color: '15158332'
-          embed-description: |
-            Error with the workflow _${{ github.workflow }}_ in https://github.com/${{ github.repository }}/actions.
-            Nothing will be deployed until this is fixed.
-            - **Commit**: _${{ env.COMMIT_MESSAGE }}_ by _${{ env.COMMIT_AUTHOR }}_
-            - **Branch**: ${{ github.ref_name }}
-            - **Status**: Failed
+            - **Branch**: `${{ github.ref_name }}`
+            - **Test**: ${{ needs.test.result }}
+            - **Build**: ${{ needs.build.result }}
 
