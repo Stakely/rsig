@@ -50,7 +50,7 @@ func BuildHttpApi(ctx context.Context, cfg config.Config) (*HttpApi, func(contex
 
 	// 4. Build mux server
 	mux := http.NewServeMux()
-	controllers.RegisterControllers(mux, keys, sp)
+	controllers.RegisterControllers(mux, keys, sp, cfg)
 
 	app := &HttpApi{
 		DB:      db,

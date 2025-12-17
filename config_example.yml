@@ -1,7 +1,8 @@
 validators:
-  keystore_path:
-  keystore_password_path:
+  keystore_path: '/path/to/keystore'
+  keystore_password_path: '/path/to/passwords'
 http:
-  port: 9090
+  port: 80
+  api_prefix: '/'
 database:
-  dsn: 'postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable'
+  dsn: ''

@@ -10,7 +10,8 @@ import (
 )
 
 type HTTP struct {
-	Port int `mapstructure:"port"`
+	Port      int    `mapstructure:"port"`
+	ApiPrefix string `mapstructure:"api_prefix"`
 }
 
 type DATABASE struct {
@@ -38,6 +39,7 @@ func Init(cfgFile string) (err error) {
 	once.Do(func() {
 		// Defaults
 		viper.SetDefault("http.port", 8080)
+		viper.SetDefault("http.api_prefix", "/")
 		viper.SetDefault("database.dsn", "")
 		viper.SetDefault("validators.keystore_path", "")
 		viper.SetDefault("validators.keystore_password_path", "")
@@ -53,6 +55,7 @@ func Init(cfgFile string) (err error) {
 		}
 
 		_ = viper.BindEnv("http.port", "HTTP_PORT")
+		_ = viper.BindEnv("http.api_prefix", "HTTP_API_PREFIX")
 		_ = viper.BindEnv("database.dsn", "DATABASE_DSN")
 		_ = viper.BindEnv("validators.keystore_path", "VALIDATORS_KEYSTORE_PATH")
 		_ = viper.BindEnv("validators.keystore_password_path", "VALIDATORS_KEYSTORE_PASSWORD_PATH")

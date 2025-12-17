@@ -11,14 +11,17 @@ import (
 	"strings"
 )
 
-func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey, sp *slashing.SlashingProtection) {
-	mux.HandleFunc("/sign/", func(w http.ResponseWriter, r *http.Request) {
+func signController(mux *http.ServeMux, keys map[string]*validator.ValidatorKey, sp *slashing.SlashingProtection, prefix string) {
+	mux.HandleFunc(prefix+"/sign/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 
-		pubHex := strings.TrimPrefix(strings.TrimPrefix(r.URL.Path, "/sign/"), "/")
+		path := strings.Trim(r.URL.Path, "/")
+		parts := strings.Split(path, "/")
+		pubHex := parts[len(parts)-1]
+		pubHex = strings.ToLower(strings.TrimPrefix(pubHex, "0x"))
 		if pubHex == "" {
 			http.Error(w, "missing public key in URL", http.StatusBadRequest)
 			return

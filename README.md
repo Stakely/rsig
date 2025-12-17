@@ -32,6 +32,7 @@ validators:
   keystore_password_path: #VALIDATORS_KEYSTORE_PASSWORD_PATH
 http:
   port: #HTTP_PORT
+  api_prefix: #HTTP_API_PREFIX
 database:
   dsn: #DATABASE_DSN
 ```
