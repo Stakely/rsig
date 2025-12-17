@@ -12,6 +12,7 @@ var (
 	migrationsDir string
 	direction     string
 	steps         int
+	dsnFlag       string
 )
 
 var migrateCmd = &cobra.Command{
@@ -28,12 +29,17 @@ Examples:
   rsig migrate --config ./config_example.yml
   rsig migrate --config ./config_example.yml --direction down --steps 1
   rsig migrate --dir ./other_route/migrations --direction up
+  rsig migrate --dsn "postgres://user:pass@localhost:5432/db?sslmode=disable"
 `,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := config.Get()
-		dsn := cfg.DATABASE.DbDsn
+		dsn := dsnFlag
 		if dsn == "" {
-			return fmt.Errorf("no database DSN configured (database.dsn is empty)")
+			cfg := config.Get()
+			dsn = cfg.DATABASE.DbDsn
+		}
+
+		if dsn == "" {
+			return fmt.Errorf("no database DSN configured (use --dsn or set database.dsn in config)")
 		}
 
 		return database.Migrate(
@@ -67,5 +73,11 @@ func init() {
 		"steps",
 		1,
 		"Number of steps to go when --direction down is used",
+	)
+	migrateCmd.Flags().StringVar(
+		&dsnFlag,
+		"dsn",
+		"",
+		"Database DSN",
 	)
 }
